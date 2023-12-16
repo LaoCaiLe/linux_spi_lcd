@@ -1,25 +1,45 @@
-TARGET = spi_ili9341
-BUILD_DIR = build
-SRC_DIR = src
-INC_DIR = inc
+PROJECT 			?= spi_ili9341
+MAKEFLAGS 			:= -j $(shell nproc)
+SRC_EXT				:= c
+OBJ_EXT				:= o
+CC 					:= aarch64-linux-gnu-gcc
 
-SRCS = $(wildcard $(SRC_DIR)/*.c)
-OBJS = $(patsubst %.c, $(BUILD_DIR)/%.o, $(notdir $(SRCS)))
-DEPS = $(wildcard $(INC_DIR)/*.h)
-CFLAGS = $(patsubst %, -I%, $(INC_DIR))
+SRC_DIR				:= ./
+WORKING_DIR			:= ./build
+BUILD_DIR			:= $(WORKING_DIR)/obj
+BIN_DIR				:= .
 
-$(BUILD_DIR)/$(TARGET): $(OBJS)
-	$(CC) -o $@ $^ $(CFLAGS)
-	ln -sf $(BUILD_DIR)/$(TARGET) test
+WARNINGS 			:= -Wall -Wextra \
+						-Wshadow -Wundef -Wmaybe-uninitialized -Wmissing-prototypes -Wno-discarded-qualifiers \
+						-Wno-unused-function -Wno-error=strict-prototypes -Wpointer-arith -fno-strict-aliasing -Wno-error=cpp -Wuninitialized \
+						-Wno-unused-parameter -Wno-missing-field-initializers -Wno-format-nonliteral -Wno-cast-qual -Wunreachable-code -Wno-switch-default  \
+						-Wreturn-type -Wmultichar -Wformat-security -Wno-ignored-qualifiers -Wno-error=pedantic -Wno-sign-compare -Wno-error=missing-prototypes -Wdouble-promotion -Wclobbered -Wdeprecated  \
+						-Wempty-body -Wshift-negative-value -Wstack-usage=2048 \
+						-Wtype-limits -Wsizeof-pointer-memaccess -Wpointer-arith
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c $(DEPS)
-	@mkdir -p $(BUILD_DIR)
-	$(CC) -c -o $@ $< $(CFLAGS)
+CFLAGS 				:= -O0 -g $(WARNINGS)
 
-.PHONY: clean cleanall
+INC 				:= -I./inc/ -I./ #-I/usr/include/freetype2 -L/usr/local/lib
+
+BIN 				:= $(BIN_DIR)/demo
+
+COMPILE				= $(CC) $(CFLAGS) $(INC)
+
+# Automatically include all source files
+SRCS 				:= $(shell find $(SRC_DIR) -type f -name '*.c' -not -path '*/\.*')
+OBJECTS				:= $(patsubst $(SRC_DIR)%,$(BUILD_DIR)/%,$(SRCS:.$(SRC_EXT)=.$(OBJ_EXT)))
+
+all: default
+
+$(BUILD_DIR)/%.$(OBJ_EXT): $(SRC_DIR)/%.$(SRC_EXT)
+	@echo 'Building project file: $<'
+	@mkdir -p $(dir $@)
+	@$(COMPILE) -c -o "$@" "$<"
+
+default: $(OBJECTS)
+	@mkdir -p $(BIN_DIR)
+	$(CC) -o $(BIN) $(OBJECTS)
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(WORKING_DIR)
 
-cleanall:
-	rm -rf $(BUILD_DIR)
